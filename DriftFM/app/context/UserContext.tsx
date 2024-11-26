@@ -3,21 +3,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/app/firebaseConfig';
 
-type UserType = {
+interface User {
   spotifyId: string;
   displayName: string;
   profileImage?: string;
-} | null;
+  isLoggedIn?: boolean;
+}
 
-type UserContextType = {
-  user: UserType;
-  setUser: (user: UserType) => void;
-};
+interface UserContextType {
+  user: User | null;
+  setUser: (user: User | null) => void;
+  setIsLoggedIn?: (status: boolean) => void;
+}
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserType>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -25,7 +27,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (userId) {
         const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
-          setUser(userDoc.data() as UserType);
+          setUser(userDoc.data() as User);
         }
       }
     };
