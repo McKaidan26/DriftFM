@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/app/firebaseConfig';
 import { useAuthRequest, makeRedirectUri } from 'expo-auth-session';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from './context/UserContext';
@@ -180,11 +181,13 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <UserProvider>
-        <RootLayoutContent />
-      </UserProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <UserProvider>
+          <RootLayoutContent />
+        </UserProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

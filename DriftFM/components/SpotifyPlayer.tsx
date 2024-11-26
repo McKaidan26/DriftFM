@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, PanResponder, Animated, FlatList, ActivityIndicator, Dimensions } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity, Animated, PanResponder, Dimensions } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '@/app/context/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SpotifyTrack {
   item: {
@@ -33,7 +34,9 @@ export function SpotifyPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoadingQueue, setIsLoadingQueue] = useState(false);
   const [queueHeight, setQueueHeight] = useState(400);
-  const panY = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const borderOpacity = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!user) return;
@@ -125,26 +128,29 @@ export function SpotifyPlayer() {
   };
 
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (_, gestureState) => {
-      const newY = Math.min(0, Math.max(-200, gestureState.dy));
-      panY.setValue(newY);
+    onStartShouldSetPanResponder: () => isExpanded,
+    onMoveShouldSetPanResponder: (_, { dy }) => isExpanded && dy > 0,
+    onPanResponderMove: (_, { dy }) => {
+      if (!isExpanded) return;
+      const newValue = Math.min(0, Math.max(-QUEUE_HEIGHT, dy));
+      translateY.setValue(newValue);
     },
-    onPanResponderRelease: (_, gestureState) => {
-      if (gestureState.dy < -50) {
-        Animated.spring(panY, {
-          toValue: -200,
-          useNativeDriver: true,
-        }).start(() => {
-          setIsExpanded(true);
-          fetchQueue();
-        });
-      } else {
-        Animated.spring(panY, {
+    onPanResponderRelease: (_, { dy, vy }) => {
+      if (!isExpanded) return;
+      if (dy > 50 || vy > 0.5) {
+        Animated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
+          tension: 65,
+          friction: 11
         }).start(() => setIsExpanded(false));
+      } else {
+        Animated.spring(translateY, {
+          toValue: -QUEUE_HEIGHT,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11
+        }).start();
       }
     },
   });
@@ -226,12 +232,13 @@ export function SpotifyPlayer() {
   };
 
   return (
-    <Animated.View
+    <Animated.View 
       style={[
-        styles.container,
-        {
-          transform: [{ translateY: panY }],
-        },
+        styles.container, 
+        { 
+          transform: [{ translateY }],
+          paddingBottom: insets.bottom
+        }
       ]}
       {...panResponder.panHandlers}
     >
@@ -285,34 +292,82 @@ export function SpotifyPlayer() {
             <TouchableOpacity onPress={() => handleSkip('next')}>
               <Ionicons name="play-skip-forward" size={24} color="#1DB954" />
             </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                if (!isExpanded) {
+                  fetchQueue();
+                  setIsExpanded(true);
+                  Animated.parallel([
+                    Animated.spring(translateY, {
+                      toValue: -QUEUE_HEIGHT,
+                      useNativeDriver: true,
+                      tension: 65,
+                      friction: 11
+                    }),
+                    Animated.timing(borderOpacity, {
+                      toValue: 1,
+                      duration: 200,
+                      useNativeDriver: true
+                    })
+                  ]).start();
+                } else {
+                  Animated.parallel([
+                    Animated.spring(translateY, {
+                      toValue: 0,
+                      useNativeDriver: true,
+                      tension: 65,
+                      friction: 11
+                    }),
+                    Animated.timing(borderOpacity, {
+                      toValue: 0,
+                      duration: 200,
+                      useNativeDriver: true
+                    })
+                  ]).start(() => setIsExpanded(false));
+                }
+              }} 
+              style={styles.queueButton}
+            >
+              <Ionicons name="list" size={24} color="#1DB954" />
+            </TouchableOpacity>
           </View>
         </View>
-
-        {isExpanded && (
-          <View style={styles.queueContainer}>
-            <ThemedText style={styles.queueTitle}>Next Up</ThemedText>
-            {queue.map((item, index) => (
-              <View key={index} style={styles.queueItem}>
-                <Image
-                  source={{ uri: item.album.images[0].url }}
-                  style={styles.queueItemArt}
-                />
-                <View style={styles.queueItemInfo}>
-                  <ThemedText style={styles.queueItemTitle} numberOfLines={1}>
-                    {item.name}
-                  </ThemedText>
-                  <ThemedText style={styles.queueItemArtist} numberOfLines={1}>
-                    {item.artists.map(artist => artist.name).join(', ')}
-                  </ThemedText>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
       </View>
+
+      <Animated.View style={[
+        styles.queueContainer,
+        {
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255,255,255,0.1)',
+          opacity: borderOpacity
+        }
+      ]}>
+        <ThemedText style={styles.queueTitle}>Next Up</ThemedText>
+        {queue.map((item, index) => (
+          <View key={index} style={styles.queueItem}>
+            <Image
+              source={{ uri: item.album.images[0].url }}
+              style={styles.queueItemArt}
+            />
+            <View style={styles.queueItemInfo}>
+              <ThemedText style={styles.queueItemTitle} numberOfLines={1}>
+                {item.name}
+              </ThemedText>
+              <ThemedText style={styles.queueItemArtist} numberOfLines={1}>
+                {item.artists.map(artist => artist.name).join(', ')}
+              </ThemedText>
+            </View>
+          </View>
+        ))}
+      </Animated.View>
     </Animated.View>
   );
 }
+
+const PLAYER_HEIGHT = 120;
+const QUEUE_ITEM_HEIGHT = 64;
+const QUEUE_PADDING = 32;
+const QUEUE_HEIGHT = (QUEUE_ITEM_HEIGHT * 3) + QUEUE_PADDING;
 
 const styles = StyleSheet.create({
   container: {
@@ -320,11 +375,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    paddingBottom: 34,
+    backgroundColor: 'transparent',
+    height: PLAYER_HEIGHT,
   },
   mainContent: {
     width: '100%',
+    height: PLAYER_HEIGHT,
+    backgroundColor: 'rgba(0,0,0,0.85)',
   },
   progressContainer: {
     width: '100%',
@@ -352,6 +409,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingBottom: 18,
   },
   albumArt: {
     width: 56,
@@ -380,9 +438,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   queueContainer: {
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    height: QUEUE_HEIGHT,
     padding: 16,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    height: 200,
+    paddingTop: 12,
+    position: 'absolute',
+    bottom: -QUEUE_HEIGHT,
+    left: 0,
+    right: 0,
   },
   queueTitle: {
     fontSize: 16,
@@ -410,5 +474,8 @@ const styles = StyleSheet.create({
   queueItemArtist: {
     fontSize: 12,
     opacity: 0.7,
+  },
+  queueButton: {
+    marginLeft: 16,
   },
 }); 
