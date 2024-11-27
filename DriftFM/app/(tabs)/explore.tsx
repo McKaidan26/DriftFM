@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   },
   distanceContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 120,
     left: 20,
     right: 20,
     zIndex: 1,
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   },
   directionsButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 120,
     alignSelf: 'center',
     backgroundColor: '#1DB954',
     paddingHorizontal: 20,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   },
   directionsContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 120,
     left: 0,
     right: 0,
     height: '40%',

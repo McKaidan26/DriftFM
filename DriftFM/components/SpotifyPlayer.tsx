@@ -40,9 +40,13 @@ export function SpotifyPlayer() {
 
   useEffect(() => {
     if (!user) return;
+    
     fetchCurrentTrack();
     const interval = setInterval(fetchCurrentTrack, 3000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+    };
   }, [user]);
 
   const handlePlayPause = async () => {

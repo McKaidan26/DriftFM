@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from './context/UserContext';
 import { SpotifyPlayer } from '@/components/SpotifyPlayer';
+import { TTSProvider } from './context/TTSContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -184,7 +185,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <UserProvider>
-          <RootLayoutContent />
+          <TTSProvider>
+            <RootLayoutContent />
+          </TTSProvider>
         </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
