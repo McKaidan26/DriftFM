@@ -1,19 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/app/firebaseConfig';
 
 interface User {
   spotifyId: string;
   displayName: string;
   profileImage?: string;
-  isLoggedIn?: boolean;
+  lastRadioId?: number;
 }
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  setIsLoggedIn?: (status: boolean) => void;
+  updateLastRadio: (radioId: number) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -34,8 +34,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
+  const updateLastRadio = async (radioId: number) => {
+    if (!user?.spotifyId) return;
+
+    try {
+      await setDoc(doc(db, 'users', user.spotifyId), {
+        lastRadioId: radioId
+      }, { merge: true });
+
+      setUser(prev => prev ? { ...prev, lastRadioId: radioId } : null);
+
+      await AsyncStorage.setItem('lastRadioId', radioId.toString());
+    } catch (error) {
+      console.error('Error updating last radio:', error);
+    }
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, updateLastRadio }}>
       {children}
     </UserContext.Provider>
   );

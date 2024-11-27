@@ -18,6 +18,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from './context/UserContext';
 import { SpotifyPlayer } from '@/components/SpotifyPlayer';
 import { TTSProvider } from './context/TTSContext';
+import { AuthProvider } from './context/AuthContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -42,7 +43,8 @@ function HeaderLeft() {
         'user-read-playback-state',
         'user-read-currently-playing',
         'user-modify-playback-state',
-        'streaming'
+        'streaming',
+        'app-remote-control'
       ],
       redirectUri: 'driftfm://spotify-auth',
       responseType: 'code',
@@ -73,7 +75,9 @@ function HeaderLeft() {
 
       const tokenData = await tokenResponse.json();
       const { access_token } = tokenData;
+      console.log('New access token received:', access_token ? 'Yes' : 'No');
       await AsyncStorage.setItem('spotifyAccessToken', access_token);
+      console.log('Access token saved to storage');
 
       const profile = await fetch('https://api.spotify.com/v1/me', {
         headers: {
@@ -185,9 +189,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <UserProvider>
-          <TTSProvider>
-            <RootLayoutContent />
-          </TTSProvider>
+          <AuthProvider>
+            <TTSProvider>
+              <RootLayoutContent />
+            </TTSProvider>
+          </AuthProvider>
         </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

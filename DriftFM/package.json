@@ -23,6 +23,7 @@
     "@react-navigation/material-top-tabs": "^7.0.12",
     "@react-navigation/native": "^7.0.0",
     "@types/spotify-web-api-node": "^5.0.11",
+    "buffer": "^6.0.3",
     "expo": "~52.0.11",
     "expo-auth-session": "~6.0.0",
     "expo-av": "~15.0.1",
@@ -52,7 +53,8 @@
     "react-native-tab-view": "^4.0.4",
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.2",
-    "spotify-web-api-node": "^5.0.2"
+    "spotify-web-api-node": "^5.0.2",
+    "expo-linear-gradient": "~14.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

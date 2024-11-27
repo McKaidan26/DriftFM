@@ -1,18 +1,60 @@
-import React from 'react';
-import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useUser } from './context/UserContext';
+import { useUser } from '@/app/context/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import SpotifyWebApi from 'spotify-web-api-node';
+
+interface SpotifyProfile {
+  display_name?: string;
+  images?: Array<{ 
+    url: string; 
+    width?: number; 
+    height?: number;
+  }>;
+}
 
 export default function ProfileScreen() {
   const { user, setUser } = useUser();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<SpotifyProfile | null>(null);
+
+  useEffect(() => {
+    const fetchSpotifyData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const accessToken = await AsyncStorage.getItem('spotifyAccessToken');
+        if (!accessToken) {
+          setError('No access token found');
+          return;
+        }
+
+        const spotifyApi = new SpotifyWebApi({ accessToken });
+        const profileResponse = await spotifyApi.getMe();
+        if (profileResponse?.body) {
+          setUserProfile(profileResponse.body);
+        }
+      } catch (error: any) {
+        setError(error?.message || 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSpotifyData();
+  }, []);
 
   const handleSignOut = async () => {
     try {
       await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('spotifyAccessToken');
+      await AsyncStorage.removeItem('spotifyRefreshToken');
       setUser(null);
       router.replace('/(tabs)');
     } catch (error) {
@@ -20,25 +62,21 @@ export default function ProfileScreen() {
     }
   };
 
-  if (!user) {
-    return (
-      <ThemedView style={styles.container}>
-        <ThemedText>Not logged in</ThemedText>
-      </ThemedView>
-    );
-  }
+  if (!user) return null;
+  if (isLoading) return <ActivityIndicator size="large" color="#1DB954" />;
+  if (error) return <ThemedText style={styles.errorText}>{error}</ThemedText>;
 
   return (
     <ThemedView style={styles.container}>
-      {user.profileImage && (
-        <Image 
-          source={{ uri: user.profileImage }} 
+      {userProfile?.images?.[0]?.url && (
+        <Image
+          source={{ uri: userProfile.images[0].url }}
           style={styles.profileImage}
         />
       )}
-      <ThemedText style={styles.name}>{user.displayName}</ThemedText>
-      <ThemedText style={styles.id}>Spotify ID: {user.spotifyId}</ThemedText>
-      
+      <ThemedText style={styles.username}>
+        {userProfile?.display_name || 'Spotify User'}
+      </ThemedText>
       <TouchableOpacity 
         style={styles.signOutButton} 
         onPress={handleSignOut}
@@ -54,33 +92,39 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 60,
+    paddingBottom: 100,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    marginBottom: 20,
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  name: {
+  username: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  id: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginBottom: 30,
+    marginBottom: 16,
   },
   signOutButton: {
     backgroundColor: '#ff4444',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 40,
   },
   signOutText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  errorText: {
+    color: '#ff4444',
+    textAlign: 'center',
+    marginBottom: 20,
   },
 }); 

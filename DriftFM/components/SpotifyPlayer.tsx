@@ -42,17 +42,16 @@ export function SpotifyPlayer() {
     if (!user) return;
     
     fetchCurrentTrack();
-    const interval = setInterval(fetchCurrentTrack, 3000);
-    
-    return () => {
-      clearInterval(interval);
-    };
+    const interval = setInterval(fetchCurrentTrack, 500);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handlePlayPause = async () => {
     try {
       const accessToken = await AsyncStorage.getItem('spotifyAccessToken');
-      await fetch(`https://api.spotify.com/v1/me/player/${currentTrack?.is_playing ? 'pause' : 'play'}`, {
+      const action = currentTrack?.is_playing ? 'pause' : 'play';
+      
+      await fetch(`https://api.spotify.com/v1/me/player/${action}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${accessToken}`,
